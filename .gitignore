@@ -44,11 +44,3 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
-echo "build/" >> .gitignore
-echo ".dart_tool/" >> .gitignore
-echo ".idea/" >> .gitignore
-echo ".vscode/" >> .gitignore
-echo "ios/" >> .gitignore
-echo "android/" >> .gitignore
-echo "pubspec.lock" >> .gitignore
