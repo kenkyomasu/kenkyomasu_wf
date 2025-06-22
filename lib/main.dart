@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'formulario.dart';
-import 'buscar.dart';
+import 'screens/screens.dart'; // Importa las pantallas desde el archivo screens.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +24,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/formulario': (context) => const FormularioScreen(),
         '/buscar': (context) => const BuscarScreen(),
+        '/inicio_sesion': (context) => const LoginScreen(),
       },
     );
   }
@@ -44,6 +44,13 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/inicio_sesion');
+              },
+              child: const Text('Iniciar Sesión'),
+            ),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/formulario');
