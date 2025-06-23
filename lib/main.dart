@@ -25,6 +25,8 @@ class MyApp extends StatelessWidget {
         '/formulario': (context) => const FormularioScreen(),
         '/buscar': (context) => const BuscarScreen(),
         '/inicio_sesion': (context) => const LoginScreen(),
+        '/home_admin': (context) => const HomeAdminScreen(),
+        '/home_user': (context) => const HomeUserScreen(),
       },
     );
   }
@@ -37,8 +39,15 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pantalla Principal'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text(
+          'Pantalla Principal - Proyecto Flutter',
+          style: TextStyle(
+            fontSize: 24,
+            fontFamily: 'Roboto',
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.lightBlue,
       ),
       body: Center(
         child: Column(
@@ -57,13 +66,13 @@ class HomeScreen extends StatelessWidget {
               },
               child: const Text('Ir al Formulario'),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/buscar');
-              },
-              child: const Text('Buscar Usuario'),
-            ),
+            // const SizedBox(height: 16),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     Navigator.pushNamed(context, '/buscar');
+            //   },
+            //   child: const Text('Buscar Usuario'),
+            // ),
           ],
         ),
       ),

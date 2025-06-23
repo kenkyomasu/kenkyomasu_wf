@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 
@@ -15,6 +16,9 @@ class _BuscarScreenState extends State<BuscarScreen> {
     'usuarios',
   );
   final TextEditingController _rutBuscarController = TextEditingController();
+
+  late final FirebaseAuth _auth;
+  String _tipoUsuarioActual = 'user';
 
   Map<String, dynamic>? _datosSeleccionados;
   List<Map<String, dynamic>> _listaUsuarios = [];
@@ -34,7 +38,30 @@ class _BuscarScreenState extends State<BuscarScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeFirebase();
     _cargarListaUsuarios();
+  }
+
+  Future<void> _initializeFirebase() async {
+    _auth = FirebaseAuth.instance;
+    await _obtenerTipoUsuarioActual();
+  }
+
+  Future<void> _obtenerTipoUsuarioActual() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      _tipoUsuarioActual = 'user';
+      return;
+    }
+    final snapshot = await _dbRef.child(user.email!.split('@')[0]).get();
+    if (!snapshot.exists) {
+      _tipoUsuarioActual = 'user';
+      return;
+    }
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    setState(() {
+      _tipoUsuarioActual = data['tipo'] ?? 'user';
+    });
   }
 
   @override
@@ -102,13 +129,19 @@ class _BuscarScreenState extends State<BuscarScreen> {
     if (_datosSeleccionados == null) return;
     final rut = _datosSeleccionados!['rut'];
     try {
-      await _dbRef.child(rut).update({
+      Map<String, dynamic> updateData = {
         'nombre': _nombreController.text,
         'apellido': _apellidoController.text,
         'correo': _correoController.text,
         'clave': _hashPassword(_claveController.text),
         'telefono': _telefonoController.text,
-      });
+      };
+      // Solo actualizar tipo si el usuario actual es admin y es creación (no edición)
+      if (_tipoUsuarioActual == 'admin' &&
+          !_datosSeleccionados!.containsKey('tipo')) {
+        updateData['tipo'] = _datosSeleccionados!['tipo'];
+      }
+      await _dbRef.child(rut).update(updateData);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Usuario actualizado correctamente')),
       );
@@ -203,6 +236,28 @@ class _BuscarScreenState extends State<BuscarScreen> {
               ),
               keyboardType: TextInputType.phone,
             ),
+            if (_tipoUsuarioActual == 'admin') ...[
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _datosSeleccionados!['tipo'] ?? 'user',
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de usuario',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'admin',
+                    child: Text('Administrador'),
+                  ),
+                  DropdownMenuItem(value: 'user', child: Text('Usuario')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _datosSeleccionados!['tipo'] = value ?? 'user';
+                  });
+                },
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [

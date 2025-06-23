@@ -1,0 +1,25 @@
+# Desactivar la caché para archivos HTML para que siempre se cargue la última versión
+<FilesMatch "\.(html|htm)$">
+  Header set Cache-Control "no-cache, no-store, must-revalidate"
+  Header set Pragma "no-cache"
+  Header set Expires 0
+</FilesMatch>
+
+# Desactivar la caché para archivos JS temporalmente para desarrollo
+<FilesMatch "\.(js)$">
+  Header set Cache-Control "no-cache, no-store, must-revalidate"
+  Header set Pragma "no-cache"
+  Header set Expires 0
+</FilesMatch>
+
+# Cachear archivos CSS, imágenes con expiración larga para mejorar rendimiento
+<FilesMatch "\.(css|png|jpg|jpeg|gif|svg|ico)$">
+  Header set Cache-Control "max-age=31536000, public"
+</FilesMatch>
+
+# Forzar la actualización de index.html para SPA Flutter Web
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.html [QSA,L]
+</IfModule>

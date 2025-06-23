@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import 'package:proyecto_web_flutter_bd/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 
@@ -27,10 +29,34 @@ class _FormularioScreenState extends State<FormularioScreen> {
 
   late final FirebaseAuth _auth;
 
+  String _tipoSeleccionado = 'user';
+
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
   @override
   void initState() {
     super.initState();
     _initializeFirebase();
+  }
+
+  Future<bool> _esAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final snapshot = await _dbRef.child(user.email!.split('@')[0]).get();
+    if (!snapshot.exists) return false;
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    return data['tipo'] == 'admin';
+  }
+
+  Future<int> _cantidadUsuarios() async {
+    final snapshot = await _dbRef.get();
+    if (!snapshot.exists) return 0;
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+    return data.length;
   }
 
   Future<void> _initializeFirebase() async {
@@ -54,11 +80,17 @@ class _FormularioScreenState extends State<FormularioScreen> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // Crear usuario en Firebase Authentication
-        await _auth.createUserWithEmailAndPassword(
-          email: _correoController.text.trim(),
-          password: _claveController.text.trim(),
-        );
+        final cantidadUsuarios = await _cantidadUsuarios();
+
+        String tipoUsuario = 'user';
+        if (cantidadUsuarios == 0) {
+          tipoUsuario = 'admin';
+        } else {
+          final esAdmin = await _esAdmin();
+          if (esAdmin) {
+            tipoUsuario = _tipoSeleccionado;
+          }
+        }
 
         // Guardar otros datos en Realtime Database
         await _dbRef.child(_rutController.text).set({
@@ -67,28 +99,21 @@ class _FormularioScreenState extends State<FormularioScreen> {
           'apellido': _apellidoController.text,
           'correo': _correoController.text,
           'telefono': _telefonoController.text,
+          'clave': _hashPassword(_claveController.text),
+          'tipo': tipoUsuario,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Usuario creado correctamente')),
         );
         _formKey.currentState!.reset();
-      } on FirebaseAuthException catch (e) {
-        String mensaje = 'Error al crear usuario';
-        if (e.code == 'email-already-in-use') {
-          mensaje = 'El correo ya está en uso';
-        } else if (e.code == 'invalid-email') {
-          mensaje = 'Correo inválido';
-        } else if (e.code == 'weak-password') {
-          mensaje = 'La contraseña es muy débil';
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensaje)));
+        setState(() {
+          _tipoSeleccionado = 'user';
+        });
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error al crear usuario: $e')));
       }
     }
   }
@@ -196,6 +221,52 @@ class _FormularioScreenState extends State<FormularioScreen> {
                     return 'Por favor ingresa un número válido';
                   }
                   return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              FutureBuilder<bool>(
+                future: _esAdmin(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox();
+                  }
+                  if (snapshot.hasData && snapshot.data == true) {
+                    return FutureBuilder<int>(
+                      future: _cantidadUsuarios(),
+                      builder: (context, snapshotCount) {
+                        if (snapshotCount.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox();
+                        }
+                        if (snapshotCount.hasData && snapshotCount.data! > 0) {
+                          return DropdownButtonFormField<String>(
+                            value: _tipoSeleccionado,
+                            decoration: const InputDecoration(
+                              labelText: 'Tipo de usuario',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'admin',
+                                child: Text('Administrador'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'user',
+                                child: Text('Usuario'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _tipoSeleccionado = value ?? 'user';
+                              });
+                            },
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    );
+                  }
+                  return const SizedBox();
                 },
               ),
               const SizedBox(height: 24),

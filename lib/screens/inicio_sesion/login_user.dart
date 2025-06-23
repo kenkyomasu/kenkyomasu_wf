@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return digest.toString();
   }
 
-  Future<bool> _validarUsuario(String correo, String clave) async {
+  Future<String?> _validarUsuario(String correo, String clave) async {
     final snapshot = await _dbRef.get();
     if (snapshot.exists) {
       final data = Map<String, dynamic>.from(snapshot.value as Map);
@@ -36,11 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
             usuario['correo'].toString().toLowerCase() ==
                 correo.toLowerCase() &&
             usuario['clave'] == _hashPassword(clave)) {
-          return true;
+          return usuario['tipo'] ?? 'user';
         }
       }
     }
-    return false;
+    return null;
   }
 
   void _iniciarSesion() async {
@@ -54,9 +54,13 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    bool esValido = await _validarUsuario(correo, clave);
-    if (esValido) {
-      Navigator.pushNamed(context, '/formulario');
+    String? tipoUsuario = await _validarUsuario(correo, clave);
+    if (tipoUsuario != null) {
+      if (tipoUsuario == 'admin') {
+        Navigator.pushReplacementNamed(context, '/home_admin');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home_user');
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Usuario o contraseña incorrectos')),
